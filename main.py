@@ -19,7 +19,7 @@ if __name__ == '__main__':
         '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     LOGIN_MAIL = os.environ.get("MAIL_ADDRESS")
     LOGIN_PASSWORD = os.environ.get("PASSWORD")
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                     time.sleep(60)
                     driver.refresh()
                 except Exception as e:
-                    logger.error(e)
+                    logger.debug(e)
                     logger.info("Add to Cart Button not found, might not in stock...")
                     time.sleep(60)
                     driver.refresh()
