@@ -5,7 +5,7 @@ from selenium import webdriver
 from dotenv import load_dotenv
 
 from utils.customized_exception import *
-
+from utils.utils import decline_warranty
 
 if __name__ == '__main__':
     load_dotenv(verbose=True)
@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
     LOGIN_MAIL = os.environ.get("MAIL_ADDRESS")
     LOGIN_PASSWORD = os.environ.get("PASSWORD")
-    ITEM_URL = os.environ.get("ITEM_URL")
-    # ITEM_URL = os.environ.get("TEST_URL")
+    # ITEM_URL = os.environ.get("ITEM_URL")
+    ITEM_URL = os.environ.get("TEST_URL")
     ACCEPT_SHOP = 'Amazon.com'
     LIMIT_MAX_VALUE = 570.0
 
@@ -73,10 +73,8 @@ if __name__ == '__main__':
                 logger.info("Add to Cart Button not found, might not in stock...")
                 time.sleep(18 + random.randint(0, 13))
                 driver.refresh()
-        try:
-            driver.find_element_by_id('siNoCoverage-announce').click()
-        except:
-            logger.info("try to get warranty decline btn failed, might warranty ad not shown.")
+        time.sleep(1)
+        decline_warranty(driver, logger)
 
         driver.get('https://www.amazon.com/gp/cart/view.html?ref_=nav_cart')
         try:
@@ -90,7 +88,7 @@ if __name__ == '__main__':
             driver.find_element_by_id('ap_password').send_keys(LOGIN_PASSWORD)
             driver.find_element_by_id('signInSubmit').click()
         except:
-            logger.info('LOGIN PASS.')
+            logger.error('login failed')
             pass
         time.sleep(1)
         p = driver.find_element_by_css_selector('td.grand-total-price').text
