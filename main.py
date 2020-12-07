@@ -1,4 +1,4 @@
-import selenium, os, logging, time, re
+import selenium, os, logging, time, re, random
 from selenium.common.exceptions import NoSuchElementException
 from os.path import join, dirname
 from selenium import webdriver
@@ -66,12 +66,12 @@ if __name__ == '__main__':
                 # break
             except NotAmazonSellerError:
                 logger.warning("In Stock from other Sellers...")
-                time.sleep(60)
+                time.sleep(18 + random.randint(0, 13))
                 driver.refresh()
             except Exception as e:
                 logger.debug(e)
                 logger.info("Add to Cart Button not found, might not in stock...")
-                time.sleep(60)
+                time.sleep(18 + random.randint(0, 13))
                 driver.refresh()
         try:
             driver.find_element_by_id('siNoCoverage-announce').click()
