@@ -1,6 +1,6 @@
 .idea
 .DS_Store
 .env
-chromedriver
+drivers/chromedriver
 
 */**/*.pyc
