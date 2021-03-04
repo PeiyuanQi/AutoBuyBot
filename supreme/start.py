@@ -1,4 +1,4 @@
-import selenium, os, logging, time, re, random
+import selenium, os, logging, time, re, random, datetime
 from selenium.common.exceptions import NoSuchElementException
 from os.path import join, dirname
 from selenium import webdriver
@@ -23,9 +23,7 @@ if __name__ == '__main__':
     logger.addHandler(handler)
     logger.setLevel(log_level[os.environ.get("LOG_LEVEL")])
 
-    # ITEM_URL = os.environ.get("ITEM_URL")
     SHOP_URL = os.environ.get("SHOP_URL")
-    LIMIT_MAX_VALUE = 1000.0
 
     try:
         options = webdriver.ChromeOptions()
@@ -38,94 +36,103 @@ if __name__ == '__main__':
         logger.error(e)
         exit()
 
-    time.sleep(2)
+    start_time = '08:00:00'
+    start_time = '00:00:00'
+    now = datetime.datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    while current_time < start_time:
+        logger.info(current_time)
+        time.sleep(1)
+        now = datetime.datetime.now()
+        current_time = now.strftime("%H:%M:%S")
 
+    logger.info("Start Bot now")
+
+    # if in stock?
     while True:
-        # if in stock?
-        while True:
-            try:
-                target_shoes = []
-                # shoes = driver.find_elements_by_xpath("//li[@class='shoes']/a")
-                shoes = driver.find_elements_by_xpath("//li[@class='tops/sweaters']/a")
+        try:
+            target_shoes = []
+            target_xpath = "//li[@class='shoes']/a"
+            # target_xpath = "//li[@class='tops/sweaters']/a"
+            shoes = driver.find_elements_by_xpath(target_xpath)
+            for each_shoe in shoes:
+                href = each_shoe.get_attribute('href')
+                logger.debug("Find shoe link: " + str(href))
+                if str(href) != "https://www.supremenewyork.com/shop/shoes/m6sh4qcy1":
+                    target_shoes.append(href)
+
+            while len(target_shoes) == 0:
+                time.sleep(random.randint(0,5))
+                driver.get(SHOP_URL)
+                time.sleep(1)
+                shoes = driver.find_elements_by_xpath(target_xpath)
                 for each_shoe in shoes:
                     href = each_shoe.get_attribute('href')
                     logger.debug("Find shoe link: " + str(href))
                     if str(href) != "https://www.supremenewyork.com/shop/shoes/m6sh4qcy1":
                         target_shoes.append(href)
-
-                for each_shoe in target_shoes:
-                    driver.get(each_shoe)
+            size1_flag = False
+            for each_shoe in target_shoes:
+                driver.get(each_shoe)
+                # find if sold out
+                try:
+                    driver.find_element_by_xpath("//b[@class='button sold-out']")
+                    continue
+                except NoSuchElementException:
+                    logger.info("Current Item Not Sold Out " + str(each_shoe))
+                except Exception as e:
+                    logger.debug(e)
+                # try to select size
+                try:
+                    driver.find_element_by_xpath("//select[@name='s']/option[text()='8.5']").click()
+                    # driver.find_element_by_xpath("//select[@name='s']/option[text()='Large']").click()
+                    size1_flag = True
+                except NoSuchElementException:
+                    logger.error("Not find find_element_by_xpath(//select[@name='s']/option[text()='Large'])")
+                except Exception as e:
+                    logger.debug(e)
+                if not size1_flag:
                     try:
-                        driver.find_element_by_xpath("//select[@name='s']/option[text()='Large']").click()
+                        driver.find_element_by_xpath("//select[@name='s']/option[text()='8']").click()
                     except NoSuchElementException:
-                        logger.error("Not find find_element_by_xpath(//select[@name='s']/option[text()='Large'])")
-                        continue
+                        logger.error("Not find driver.find_element_by_xpath(//select[@name='s']/option[text()='8']).click()")
                     except Exception as e:
                         logger.debug(e)
-                        continue
-                    # driver.find_element_by_xpath("//select[@name='s']/option[text()='8.5']").click()
-                    driver.find_element_by_xpath("//input[@value='add to cart']").click()
-                    time.sleep(0.1)
-                    print("breaking")
-                    break
-                driver.get("https://www.supremenewyork.com/checkout")
+                # try to select color
+                try:
+                    driver.find_element_by_xpath("//button[@data-style-name='Hyper Blue']").click()
+                    # driver.find_element_by_xpath("//button[@data-style-name='Dusty Royal']").click()
+                except NoSuchElementException:
+                    logger.error("Not find driver.find_element_by_xpath(//button[@data-style-name='Dusty Royal']).click()")
+                except Exception as e:
+                    logger.debug(e)
+                # driver.find_element_by_xpath("//select[@name='s']/option[text()='8.5']").click()
+                driver.find_element_by_xpath("//input[@value='add to cart']").click()
+                time.sleep(0.1)
+            driver.get("https://www.supremenewyork.com/checkout")
+            try:
                 driver.find_element_by_id('order_billing_name').send_keys(os.environ.get("BUYER_NAME"))
-                exit()
-
-                amazon_info_table = driver.find_element_by_id('tabular-buybox-container').text
-                match_result = re.search("Sold by\s+([a-zA-z.]+)", amazon_info_table).group(1)
-                if ACCEPT_SHOP != match_result:
-                    raise NotAmazonSellerError
-                # add to cart
-                driver.find_element_by_id('add-to-cart-button').click()
-                break
-                # buy now instead of adding to cart
-                # driver.find_element_by_id('buy-now-button').click()
-                # time.sleep(1)
-                # place_order_btn = None
-                # while place_order_btn is None:
-                #     try:
-                #         place_order_btn = driver.find_element_by_partial_link_text("turbo-checkout-pyo-button")
-                #     except NoSuchElementException:
-                #         logger.warning('Place Order Button Not Loaded Yet!')
-                #         time.sleep(1)
-                # place_order_btn.click()
-                # break
-            except NotAmazonSellerError:
-                logger.warning("In Stock from other Sellers...")
-                time.sleep(18 + random.randint(0, 13))
-                driver.refresh()
+                driver.find_element_by_id('order_email').send_keys(os.environ.get("BUYER_EMAIL"))
+                driver.find_element_by_id('order_tel').send_keys(os.environ.get("BUYER_PHONE"))
+                driver.find_element_by_id('bo').send_keys(os.environ.get("BUYER_ADDR"))
+                driver.find_element_by_id('order_billing_zip').send_keys(os.environ.get("BUYER_ZIPCODE"))
+                driver.find_element_by_id('order_billing_city').send_keys(os.environ.get("BUYER_CITY"))
+                driver.find_element_by_xpath("//select[@id='order_billing_state']/option[@value='CA']").click()
+                driver.find_element_by_xpath("//select[@id='credit_card_type']/option[@value='credit card']").click()
+                driver.find_element_by_id('rnsnckrn').send_keys(os.environ.get("CARD_NUM"))
+                driver.find_element_by_xpath("//select[@id='credit_card_month']/option[@value='04']").click()
+                driver.find_element_by_xpath("//select[@id='credit_card_year']/option[@value='2024']").click()
+                driver.find_element_by_id('orcer').send_keys(os.environ.get("CARD_CVV"))
+                driver.find_element_by_xpath("//label[@class='has-checkbox terms']").click()
+                driver.find_element_by_xpath("//input[@value='process payment']").click()
             except Exception as e:
-                logger.debug(e)
-                logger.info("Add to Cart Button not found, might not in stock...")
-                time.sleep(18 + random.randint(0, 13))
-                driver.refresh()
-        time.sleep(1)
-        decline_warranty(driver, logger)
+                logger.error(e)
+                logger.error("Check out failed.")
+            break
 
-        driver.get('https://www.amazon.com/gp/cart/view.html?ref_=nav_cart')
-        try:
-            driver.find_element_by_name('proceedToRetailCheckout').click()
-        except NoSuchElementException:
-            logger.error("Not successfully added to cart... redo the process")
-            continue
-        try:
-            driver.find_element_by_id('ap_email').send_keys(LOGIN_MAIL)
-            driver.find_element_by_id('continue').click()
-            driver.find_element_by_id('ap_password').send_keys(LOGIN_PASSWORD)
-            driver.find_element_by_id('signInSubmit').click()
-        except:
-            logger.error('login failed')
-            pass
-        time.sleep(1)
-        p = driver.find_element_by_css_selector('td.grand-total-price').text
-        r = re.search("\$([0-9]+\.[0-9]+)", p)
-        price_str = r.group(1) if r else ""
-        if float(price_str) > LIMIT_MAX_VALUE:
-            logger.warning("Price %s is too large", price_str)
-            continue
-
-        driver.find_element_by_name('placeYourOrder1').click()
-        break
+        except Exception as e:
+            logger.debug(e)
+            time.sleep(random.randint(0, 13))
+            driver.refresh()
 
     logger.info('ALL DONE.')
